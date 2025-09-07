@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaos & Math Simulation Terminal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        #terminal {
+            width: 100%;
+            height: 100vh;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+            overflow: hidden;
+        }
+
+        .terminal-line {
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .terminal-line.visible {
+            opacity: 1;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 20px;
+            background-color: #00ff00;
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        /* Glitch effect */
+        .glitch {
+            position: relative;
+            animation: glitch 2s infinite;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            animation: glitch-1 0.5s infinite;
+            color: #00ffff;
+            z-index: -1;
+        }
+
+        .glitch::after {
+            animation: glitch-2 0.5s infinite;
+            color: #ff00ff;
+            z-index: -2;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 0 0 5px #00ff00; }
+            20% { text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff; }
+            40% { text-shadow: 2px 0 #ff00ff, -2px 0 #00ffff; }
+            60% { text-shadow: 0 0 5px #00ff00; }
+            80% { text-shadow: 2px 0 #ff00ff, -2px 0 #00ffff; }
+        }
+
+        @keyframes glitch-1 {
+            0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+            20% { clip-path: inset(20% 0 30% 0); transform: translate(-2px); }
+            40% { clip-path: inset(50% 0 20% 0); transform: translate(2px); }
+            60% { clip-path: inset(10% 0 60% 0); transform: translate(1px); }
+            80% { clip-path: inset(80% 0 5% 0); transform: translate(-1px); }
+        }
+
+        @keyframes glitch-2 {
+            0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+            20% { clip-path: inset(60% 0 10% 0); transform: translate(2px); }
+            40% { clip-path: inset(20% 0 50% 0); transform: translate(-2px); }
+            60% { clip-path: inset(30% 0 40% 0); transform: translate(-1px); }
+            80% { clip-path: inset(5% 0 80% 0); transform: translate(1px); }
+        }
+
+        /* Matrix rain canvas */
+        #matrix-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #matrix-canvas.active {
+            opacity: 0.7;
+        }
+
+        #matrix-canvas.infinite {
+            z-index: 10;
+            opacity: 1 !important;
+        }
+
+        /* Lorenz attractor container */
+        #lorenz-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #lorenz-container.active {
+            opacity: 1;
+        }
+
+        .lorenz-point {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background-color: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        /* Random glitch lines */
+        .glitch-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: #00ff00;
+            opacity: 0;
+            z-index: 3;
+            animation: glitch-line 0.5s ease-in-out;
+        }
+
+        @keyframes glitch-line {
+            0% { opacity: 0; transform: translateY(-10px); }
+            50% { opacity: 0.8; }
+            100% { opacity: 0; transform: translateY(10px); }
+        }
+
+        /* Terminal instability effect */
+        .instability {
+            animation: shake 0.2s infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        /* Skull style - BIG and centered */
+        #skull-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+            text-align: center;
+            font-size: 32px;
+            line-height: 1.1;
+            filter: drop-shadow(0 0 20px #00ff00);
+            white-space: pre;
+        }
+
+        #skull-container.visible {
+            opacity: 1;
+        }
+
+        .skull-line {
+            margin: 0;
+            padding: 0;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            font-weight: bold;
+        }
+
+        /* Skull animation */
+        @keyframes skullPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        #skull-container.visible {
+            animation: skullPulse 3s ease-in-out infinite;
+        }
+
+        /* Infinite mode message */
+        #infinite-message {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 11;
+            color: #00ff00;
+            font-size: 18px;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        #infinite-message.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal">
+        <div class="terminal-line"></div>
+        <div class="cursor"></div>
+    </div>
+    
+    <canvas id="matrix-canvas"></canvas>
+    <div id="lorenz-container"></div>
+    
+    <!-- Big Skull container -->
+    <div id="skull-container">
+        <div class="skull-line">      .-""""-.      </div>
+        <div class="skull-line">    .'          '.    </div>
+        <div class="skull-line">   /   O      O   \   </div>
+        <div class="skull-line">  :                :  </div>
+        <div class="skull-line">  |      __       |  </div>
+        <div class="skull-line">  |     /  \      |  </div>
+        <div class="skull-line">  :    \____/     :  </div>
+        <div class="skull-line">   '.            .'   </div>
+        <div class="skull-line">     '-......-'     </div>
+        <div class="skull-line">        |  |        </div>
+        <div class="skull-line">        |  |        </div>
+        <div class="skull-line">      .'    '.      </div>
+        <div class="skull-line">     /        \     </div>
+        <div class="skull-line">    :          :    </div>
+        <div class="skull-line">    |          |    </div>
+        <div class="skull-line">    :          :    </div>
+        <div class="skull-line">     \        /     </div>
+        <div class="skull-line">      '.____.'      </div>
+    </div>
+
+    <!-- Infinite mode message -->
+    <div id="infinite-message">
+        ENTERING INFINITE MATRIX MODE<br>
+        <span style="font-size: 14px;">Press ESC to exit (not really)</span>
+    </div>
+
+    <script>
+        // Terminal controller
+        class Terminal {
+            constructor() {
+                this.terminal = document.getElementById('terminal');
+                this.cursor = document.querySelector('.cursor');
+                this.currentLine = document.querySelector('.terminal-line');
+                this.matrixCanvas = document.getElementById('matrix-canvas');
+                this.matrixCtx = this.matrixCanvas.getContext('2d');
+                this.lorenzContainer = document.getElementById('lorenz-container');
+                this.skullContainer = document.getElementById('skull-container');
+                this.infiniteMessage = document.getElementById('infinite-message');
+                this.isTyping = false;
+                this.sequenceIndex = 0;
+                this.firstCycleComplete = false;
+                
+                this.setupCanvas();
+                this.startSequence();
+            }
+
+            setupCanvas() {
+                this.matrixCanvas.width = window.innerWidth;
+                this.matrixCanvas.height = window.innerHeight;
+                
+                window.addEventListener('resize', () => {
+                    this.matrixCanvas.width = window.innerWidth;
+                    this.matrixCanvas.height = window.innerHeight;
+                });
+            }
+
+            async startSequence() {
+                if (this.firstCycleComplete) {
+                    // After first cycle, enter infinite matrix mode
+                    await this.infiniteMatrixRain();
+                    return;
+                }
+
+                const sequences = [
+                    () => this.showIntro(),
+                    () => this.showHelp(),
+                    () => this.showChaosTheory(),
+                    () => this.showLorenzAttractor(),
+                    () => this.showMatrixMode(),
+                    () => this.showGlitchingLines(),
+                    () => this.clearScreen()
+                ];
+
+                for (let i = 0; i < sequences.length; i++) {
+                    await sequences[i]();
+                }
+                
+                // Mark first cycle as complete
+                this.firstCycleComplete = true;
+                
+                // Start infinite matrix rain
+                await this.infiniteMatrixRain();
+            }
+
+            async showIntro() {
+                const line = this.createTerminalLine();
+                line.classList.add('glitch');
+                line.setAttribute('data-text', 'Initializing Chaos Terminal...');
+                await this.typeText(line, 'Initializing Chaos Terminal...', 50);
+                await this.wait(1000);
+                this.fadeOut(line);
+                await this.wait(500);
+            }
+
+            async showHelp() {
+                const commands = [
+                    'Available commands:',
+                    'CHAOS      - Run chaos theory simulation',
+                    'LORENZ     - Simulate Lorenz attractor',
+                    'MATRIX     - Activate Matrix mode',
+                    'GLITCH     - Terminal stress test',
+                    'CLEAR      - Clear terminal screen',
+                    'EXIT       - Terminate session (not available)'
+                ];
+
+                for (const cmd of commands) {
+                    const line = this.createTerminalLine();
+                    await this.typeText(line, cmd, 30);
+                    await this.wait(200);
+                }
+
+                await this.wait(1500);
+                this.fadeOutAllLines();
+                await this.wait(500);
+            }
+
+            async showChaosTheory() {
+                const line1 = this.createTerminalLine();
+                await this.typeText(line1, 'Running CHAOS...', 50);
+                await this.wait(800);
+
+                const line2 = this.createTerminalLine();
+                const chaosText = `Chaos theory studies the behavior of dynamical systems that are highly sensitive to initial conditions.
+Small differences in initial conditions yield widely diverging outcomes, rendering long-term prediction impossible.
+This happens even though these systems are deterministic, meaning their future behavior is fully determined by their initial conditions.`;
+                
+                await this.typeText(line2, chaosText, 20);
+                await this.wait(2000);
+                this.fadeOutAllLines();
+                await this.wait(500);
+            }
+
+            async showLorenzAttractor() {
+                const line = this.createTerminalLine();
+                await this.typeText(line, 'Simulating LORENZ attractor...', 50);
+                await this.wait(800);
+
+                this.lorenzContainer.classList.add('active');
+                this.lorenzContainer.innerHTML = '';
+                
+                // Simulate Lorenz attractor with points
+                const points = [];
+                let x = 0.1, y = 0, z = 0;
+                const dt = 0.01;
+                const sigma = 10, rho = 28, beta = 8/3;
+                
+                // Create initial points
+                for (let i = 0; i < 100; i++) {
+                    const point = document.createElement('div');
+                    point.classList.add('lorenz-point');
+                    this.lorenzContainer.appendChild(point);
+                    points.push({
+                        element: point,
+                        x: 0,
+                        y: 0,
+                        age: 0
+                    });
+                }
+
+                // Animation loop for Lorenz attractor
+                const animateLorenz = () => {
+                    if (!this.lorenzContainer.classList.contains('active')) return;
+                    
+                    // Calculate new position
+                    const dx = sigma * (y - x) * dt;
+                    const dy = (x * (rho - z) - y) * dt;
+                    const dz = (x * y - beta * z) * dt;
+                    
+                    x += dx;
+                    y += dy;
+                    z += dz;
+                    
+                    // Scale and center the points
+                    const scale = 5;
+                    const centerX = this.lorenzContainer.offsetWidth / 2;
+                    const centerY = this.lorenzContainer.offsetHeight / 2;
+                    
+                    // Update points
+                    for (let i = points.length - 1; i > 0; i--) {
+                        points[i].x = points[i-1].x;
+                        points[i].y = points[i-1].y;
+                        points[i].age++;
+                        
+                        // Fade out older points
+                        const opacity = Math.max(0, 1 - points[i].age / 50);
+                        points[i].element.style.opacity = opacity;
+                    }
+                    
+                    // Add new point at the front
+                    points[0].x = centerX + x * scale;
+                    points[0].y = centerY + y * scale;
+                    points[0].age = 0;
+                    points[0].element.style.opacity = 1;
+                    
+                    // Update DOM
+                    points.forEach(point => {
+                        point.element.style.left = `${point.x}px`;
+                        point.element.style.top = `${point.y}px`;
+                    });
+                    
+                    requestAnimationFrame(animateLorenz);
+                };
+                
+                animateLorenz();
+                await this.wait(4000);
+                this.lorenzContainer.classList.remove('active');
+                this.fadeOutAllLines();
+                await this.wait(500);
+            }
+
+            async showMatrixMode() {
+                const line = this.createTerminalLine();
+                await this.typeText(line, 'Starting MATRIX mode...', 50);
+                await this.wait(800);
+
+                this.matrixCanvas.classList.add('active');
+                this.skullContainer.classList.add('visible');
+                this.startMatrixRain();
+                
+                // Add instability effect
+                this.terminal.classList.add('instability');
+                
+                await this.wait(10000); // 10 seconds of Matrix rain
+                this.matrixCanvas.classList.remove('active');
+                this.skullContainer.classList.remove('visible');
+                this.terminal.classList.remove('instability');
+                this.fadeOutAllLines();
+                await this.wait(500);
+            }
+
+            startMatrixRain() {
+                const ctx = this.matrixCtx;
+                const width = this.matrixCanvas.width;
+                const height = this.matrixCanvas.height;
+                
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?';
+                const fontSize = 14;
+                const columns = width / fontSize;
+                const drops = [];
+                
+                for (let i = 0; i < columns; i++) {
+                    drops[i] = Math.random() * height;
+                }
+                
+                const draw = () => {
+                    if (!this.matrixCanvas.classList.contains('active') && !this.matrixCanvas.classList.contains('infinite')) return;
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = `${fontSize}px monospace`;
+                    
+                    for (let i = 0; i < drops.length; i++) {
+                        const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                        
+                        if (drops[i] * fontSize > height && Math.random() > 0.975) {
+                            drops[i] = 0;
+                        }
+                        
+                        drops[i]++;
+                    }
+                    
+                    requestAnimationFrame(draw);
+                };
+                
+                draw();
+            }
+
+            async showGlitchingLines() {
+                const line = this.createTerminalLine();
+                await this.typeText(line, 'Terminal stress test...', 50);
+                await this.wait(800);
+                
+                // Create random glitch lines
+                for (let i = 0; i < 10; i++) {
+                    setTimeout(() => {
+                        const glitchLine = document.createElement('div');
+                        glitchLine.classList.add('glitch-line');
+                        glitchLine.style.top = `${Math.random() * window.innerHeight}px`;
+                        document.body.appendChild(glitchLine);
+                        
+                        setTimeout(() => {
+                            document.body.removeChild(glitchLine);
+                        }, 500);
+                    }, i * 200);
+                }
+                
+                await this.wait(2500);
+                this.fadeOutAllLines();
+                await this.wait(500);
+            }
+
+            async clearScreen() {
+                const line = this.createTerminalLine();
+                await this.typeText(line, 'CLEARING TERMINAL...', 50);
+                await this.wait(800);
+                
+                // Flash effect
+                document.body.style.backgroundColor = '#00ff00';
+                await this.wait(100);
+                document.body.style.backgroundColor = '#000';
+                
+                this.fadeOutAllLines();
+                await this.wait(500);
+            }
+
+            async infiniteMatrixRain() {
+                // Show message
+                this.infiniteMessage.classList.add('visible');
+                await this.wait(3000);
+                this.infiniteMessage.classList.remove('visible');
+                
+                // Hide terminal and cursor
+                this.terminal.style.display = 'none';
+                this.cursor.style.display = 'none';
+                
+                // Make sure skull is hidden
+                this.skullContainer.classList.remove('visible');
+                
+                // Set matrix canvas to infinite mode
+                this.matrixCanvas.classList.add('infinite');
+                this.startMatrixRain();
+                
+                // Keep running indefinitely
+                while (true) {
+                    await this.wait(1000);
+                }
+            }
+
+            createTerminalLine() {
+                const line = document.createElement('div');
+                line.classList.add('terminal-line');
+                this.terminal.insertBefore(line, this.cursor);
+                return line;
+            }
+
+            async typeText(element, text, speed) {
+                this.isTyping = true;
+                element.textContent = '';
+                element.classList.add('visible');
+                
+                for (let i = 0; i < text.length; i++) {
+                    element.textContent += text.charAt(i);
+                    await this.wait(speed);
+                }
+                
+                this.isTyping = false;
+            }
+
+            fadeOut(element) {
+                element.classList.remove('visible');
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                }, 500);
+            }
+
+            fadeOutAllLines() {
+                const lines = document.querySelectorAll('.terminal-line.visible');
+                lines.forEach(line => {
+                    this.fadeOut(line);
+                });
+            }
+
+            wait(ms) {
+                return new Promise(resolve => {
+                    setTimeout(resolve, ms);
+                });
+            }
+        }
+
+        // Initialize terminal when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new Terminal();
+        });
+    </script>
+</body>
+</html>
